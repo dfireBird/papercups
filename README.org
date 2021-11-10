@@ -1,0 +1,36 @@
+#+TITLE: Papercups
+
+Papercups is TUI-based P2P chat and file sharing program written in Rust
+**NOTE:** This is reimplementation of [[https://github/dfireBird/tincan][Tincan]] using the same protocol.
+
+* Installation
+Papercups is currently not pushed in [[https://crates.io][crates.io]] so you have to build from the source.
+Ensure you have [[https://doc.rust-lang.org/cargo/getting-started/installation.html][Cargo]] before building
+** Building
+1. Clone the source
+#+BEGIN_SRC bash
+$ git clone https://github.com/dfireBird/papercups
+#+END_SRC
+2. Use cargo to build
+#+BEGIN_SRC bash
+$ cargo build --release
+#+END_SRC
+3. Install it using cargo, which will copy the binary to =~/.cargo/bin/= (assuming your prefix is =~/.cargo=)
+#+BEGIN_SRC bash
+$ cargo install
+#+END_SRC
+
+* Usage
+To start Papercups simply enter:
+#+BEGIN_SRC bash
+$ papercups
+#+END_SRC
+in the terminal.
+
+** Commands
+- =?connect <ip address>=: connects to the peer identified by the ip address.
+- =?file <path of file>=: sends the specified file to peer. File that should be transferred should be less than 4kb in size.
+
+* License
+Papercups is primarily distributed under the terms of MIT License.
+See [[file:LICENSE][LICENSE]] for details.

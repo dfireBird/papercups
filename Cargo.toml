@@ -1,0 +1,10 @@
+[package]
+name = "papercups"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.45"
+rand = "0.8.4"
+crossterm = "0.20"
+tui = {version = "0.16", features = ["crossterm"], default-features = false }
