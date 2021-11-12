@@ -1,6 +1,7 @@
 use rand::Rng;
 
 mod app;
+mod network;
 
 pub const DEFAULT_PORT: u16 = 42069;
 
