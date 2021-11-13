@@ -1,17 +1,20 @@
-use rand::Rng;
-
 mod app;
 mod network;
+
+use std::net::IpAddr;
+
+use rand::Rng;
+
+use crate::network::protocol::{File, Message};
 
 pub const DEFAULT_PORT: u16 = 42069;
 
 /// Payload used in channels between UI thread and server thread
 pub enum ChannelMessage {
-    // TODO: Add payload to enum variants
-    ConnectRequest,
+    ConnectRequest(u32, IpAddr),
     ConnectAccept,
-    Message,
-    File,
+    Message(Message),
+    File(File),
     Disconnect,
 }
 
