@@ -88,6 +88,12 @@ impl Serializable for File {
 #[derive(Debug)]
 pub struct Handshake(u32);
 
+impl Handshake {
+    pub fn id(&self) -> u32 {
+        self.0
+    }
+}
+
 impl Serializable for Handshake {
     fn to_bytes(&self) -> Vec<u8> {
         let mut data = Vec::from("Hello".as_bytes());
