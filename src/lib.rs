@@ -1,5 +1,6 @@
 mod app;
 mod network;
+mod ui;
 
 use std::net::IpAddr;
 
