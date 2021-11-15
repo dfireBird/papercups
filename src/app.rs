@@ -1,17 +1,20 @@
 use std::{
-    io::Stdout,
-    net::TcpStream,
+    io::{Read, Stdout, Write},
+    net::{IpAddr, TcpStream},
     sync::mpsc::{Receiver, Sender},
     thread,
 };
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use tui::{backend::CrosstermBackend, Terminal};
 
 use crate::{
-    network::Server,
+    network::{
+        protocol::{Handshake, Serializable},
+        Server,
+    },
     ui::{self, events::Events},
-    ChannelMessage,
+    ChannelMessage, DEFAULT_PORT,
 };
 
 type Client = TcpStream;
@@ -61,11 +64,30 @@ impl App {
     }
 
     fn recv_from_channel(&mut self) -> Result<()> {
-        todo!()
+        for message in self.rx.try_iter() {
+            match message {
+                ChannelMessage::ConnectRequest(id, ip) => {
+                    self.tx.send(ChannelMessage::ConnectAccept)?;
+                    if let None = self.client {
+                        if let Some(stream) = initiate_client(self.id, ip)? {
+                            self.client = Some(stream)
+                        } // TODO: Should display error message when client sent an wrong handshake
+                    }
+                }
+                ChannelMessage::Message(msg) => {
+                    self.state.messages.push((MsgType::Recv, msg.message()))
+                }
+                ChannelMessage::File(file) => file.save(),
+                ChannelMessage::Disconnect => self.client = None,
+                _ => (),
+            };
+        }
+        Ok(())
     }
 
     fn draw_ui(&mut self, term: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
-        todo!()
+        term.draw(|f| {})?;
+        Ok(())
     }
 
     fn handle_input(&mut self, events: &Events) {
@@ -92,5 +114,23 @@ impl Default for State {
             messages: Vec::new(),
             input: String::new(),
         }
+    }
+}
+
+fn initiate_client(id: u32, ip: IpAddr) -> Result<Option<TcpStream>> {
+    let mut stream = TcpStream::connect((ip, DEFAULT_PORT))?;
+
+    let handshake = Handshake::new(id);
+    stream.write(&handshake.to_bytes())?;
+
+    let mut buf = [0u8; 9];
+    stream.read_exact(&mut buf)?;
+    let recv_handshake =
+        Handshake::from_bytes(buf.to_vec()).context("Malformed Handshake message")?;
+
+    if recv_handshake == handshake {
+        Ok(Some(stream))
+    } else {
+        Ok(None)
     }
 }

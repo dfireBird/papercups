@@ -1,4 +1,4 @@
-use std::str;
+use std::{fs, str};
 
 use anyhow::{anyhow, Context, Result};
 
@@ -40,6 +40,12 @@ impl Serializable for ProtocolMessage {
 #[derive(Debug)]
 pub struct Message(String);
 
+impl Message {
+    pub fn message(&self) -> String {
+        self.0.clone()
+    }
+}
+
 impl Serializable for Message {
     fn to_bytes(&self) -> Vec<u8> {
         let message = self.0.as_bytes().to_vec();
@@ -61,6 +67,14 @@ impl Serializable for Message {
 pub struct File {
     name: String,
     data: Vec<u8>,
+}
+
+impl File {
+    pub fn save(&self) {
+        let mut file_path = dirs::download_dir().unwrap();
+        file_path.push(&self.name);
+        fs::write(file_path, &self.data).unwrap();
+    }
 }
 
 impl Serializable for File {
@@ -85,10 +99,14 @@ impl Serializable for File {
 }
 
 /// Strcture for handshakes, which sent (or received) before a protocol is established
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Handshake(u32);
 
 impl Handshake {
+    pub fn new(id: u32) -> Self {
+        Self(id)
+    }
+
     pub fn id(&self) -> u32 {
         self.0
     }
