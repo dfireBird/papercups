@@ -1,9 +1,18 @@
 use std::{
+    io::Stdout,
     net::TcpStream,
     sync::mpsc::{Receiver, Sender},
+    thread,
 };
 
-use crate::ChannelMessage;
+use anyhow::Result;
+use tui::{backend::CrosstermBackend, Terminal};
+
+use crate::{
+    network::Server,
+    ui::{self, events::Events},
+    ChannelMessage,
+};
 
 type Client = TcpStream;
 
@@ -27,6 +36,40 @@ impl App {
             rx,
             tx,
         }
+    }
+
+    pub fn start(mut self, server: Server) -> Result<()> {
+        let handle = thread::spawn(|| server.start_server());
+        let mut term = ui::initialize_term()?;
+
+        self.start_ui_loop(&mut term)?;
+
+        ui::deinitialize_term(term)?;
+        handle
+            .join()
+            .expect("Couldn't join on the associated thread")
+    }
+
+    fn start_ui_loop(&mut self, term: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+        let events = Events::new();
+
+        loop {
+            self.recv_from_channel()?;
+            self.draw_ui(term)?;
+            self.handle_input(&events);
+        }
+    }
+
+    fn recv_from_channel(&mut self) -> Result<()> {
+        todo!()
+    }
+
+    fn draw_ui(&mut self, term: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+        todo!()
+    }
+
+    fn handle_input(&mut self, events: &Events) {
+        todo!()
     }
 }
 
