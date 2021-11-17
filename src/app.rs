@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use crossterm::event::{KeyCode, KeyModifiers};
 use tui::{backend::CrosstermBackend, Terminal};
 
 use crate::{
@@ -13,7 +14,10 @@ use crate::{
         protocol::{Handshake, Serializable},
         Server,
     },
-    ui::{self, events::Events},
+    ui::{
+        self,
+        events::{Event, Events},
+    },
     ChannelMessage, DEFAULT_PORT,
 };
 
@@ -59,7 +63,10 @@ impl App {
         loop {
             self.recv_from_channel()?;
             self.draw_ui(term)?;
-            self.handle_input(&events);
+            let should_quit = self.handle_input(&events)?;
+            if should_quit {
+                break Ok(());
+            }
         }
     }
 
@@ -90,8 +97,25 @@ impl App {
         Ok(())
     }
 
-    fn handle_input(&mut self, events: &Events) {
-        todo!()
+    fn handle_input(&mut self, events: &Events) -> Result<bool> {
+        if let Event::Input(input) = events.next()? {
+            match input.code {
+                KeyCode::Char(c) if c == 'd' && input.modifiers == KeyModifiers::CONTROL => {
+                    return Ok(true);
+                }
+                KeyCode::Char(c) if c == 'c' && input.modifiers == KeyModifiers::CONTROL => {
+                    return Ok(true);
+                }
+                KeyCode::Char(c) => {
+                    self.state.input.push(c);
+                }
+                KeyCode::Backspace => {
+                    self.state.input.pop();
+                }
+                _ => (),
+            }
+        };
+        Ok(false)
     }
 }
 
