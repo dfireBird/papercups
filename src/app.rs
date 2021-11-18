@@ -7,7 +7,11 @@ use std::{
 
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyModifiers};
-use tui::{backend::CrosstermBackend, Terminal};
+use tui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout},
+    Terminal,
+};
 
 use crate::{
     network::{
@@ -17,6 +21,7 @@ use crate::{
     ui::{
         self,
         events::{Event, Events},
+        widgets,
     },
     ChannelMessage, DEFAULT_PORT,
 };
@@ -93,7 +98,16 @@ impl App {
     }
 
     fn draw_ui(&mut self, term: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
-        term.draw(|f| {})?;
+        term.draw(|f| {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .margin(2)
+                .constraints([Constraint::Min(15), Constraint::Length(3)].as_ref())
+                .split(f.size());
+
+            f.render_widget(widgets::message_box(&self.state.messages), chunks[0]);
+            f.render_widget(widgets::input_box(&self.state.input), chunks[1]);
+        })?;
         Ok(())
     }
 
@@ -121,7 +135,7 @@ impl App {
 
 /// Classifies the messages based on whether is received or sent
 #[derive(Debug)]
-enum MsgType {
+pub enum MsgType {
     Recv,
     Sent,
 }

@@ -1,4 +1,5 @@
 pub mod events;
+pub mod widgets;
 
 use std::io::{self, Stdout};
 
