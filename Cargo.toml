@@ -9,3 +9,4 @@ rand = "0.8.4"
 crossterm = "0.20"
 tui = {version = "0.16", features = ["crossterm"], default-features = false }
 dirs = "4.0.0"
+clap = "3.0.0-beta.5"

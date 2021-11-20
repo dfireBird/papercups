@@ -1,11 +1,14 @@
 use std::{
     io::{Read, Stdout, Write},
     net::{IpAddr, TcpStream},
+    path::Path,
+    str::FromStr,
     sync::mpsc::{Receiver, Sender},
     thread,
 };
 
 use anyhow::{Context, Result};
+use clap::Parser;
 use crossterm::event::{KeyCode, KeyModifiers};
 use tui::{
     backend::CrosstermBackend,
@@ -15,7 +18,7 @@ use tui::{
 
 use crate::{
     network::{
-        protocol::{Handshake, Serializable},
+        protocol::{File, Handshake, Message, Serializable},
         Server,
     },
     ui::{
@@ -114,6 +117,42 @@ impl App {
     fn handle_input(&mut self, events: &Events) -> Result<bool> {
         if let Event::Input(input) = events.next()? {
             match input.code {
+                KeyCode::Enter => {
+                    let input: String = self.state.input.drain(..).collect();
+                    match Command::try_parse_from(input.split_whitespace()) {
+                        Ok(command) => match command.subcmd {
+                            Commands::Connect(c) => {
+                                let ip = IpAddr::from_str(&c.ip)?;
+                                if let Some(stream) = initiate_client(self.id, ip)? {
+                                    self.client = Some(stream)
+                                } // TODO: Should display error message when client sent an wrong handshake
+                            }
+                            Commands::Disconnect => {
+                                if let Some(_) = self.client {
+                                    self.tx.send(ChannelMessage::Disconnect)?;
+                                    self.client = None;
+                                }
+                            }
+                            Commands::File(file) => {
+                                let path = Path::new(&file.path);
+                                if let Some(file) = File::new(path) {
+                                    if let Some(client) = &self.client {
+                                        let mut client = client;
+                                        client.write(&file.to_bytes())?;
+                                    } // TODO: handle not connected case
+                                } // TODO: handle None case
+                            }
+                        },
+                        Err(_) => {
+                            if let Some(client) = &self.client {
+                                let mut client = client;
+                                let msg = Message::new(input);
+                                client.write(&msg.to_bytes())?;
+                                self.state.messages.push((MsgType::Sent, msg.message()));
+                            } // TODO: handle not connected case
+                        }
+                    }
+                }
                 KeyCode::Char(c) if c == 'd' && input.modifiers == KeyModifiers::CONTROL => {
                     return Ok(true);
                 }
@@ -153,6 +192,29 @@ impl Default for State {
             input: String::new(),
         }
     }
+}
+
+#[derive(Parser)]
+struct Command {
+    #[clap(subcommand)]
+    subcmd: Commands,
+}
+
+#[derive(Parser)]
+enum Commands {
+    Connect(ConnectCommand),
+    Disconnect,
+    File(FileCommnad),
+}
+
+#[derive(Parser)]
+struct ConnectCommand {
+    ip: String,
+}
+
+#[derive(Parser)]
+struct FileCommnad {
+    path: String,
 }
 
 fn initiate_client(id: u32, ip: IpAddr) -> Result<Option<TcpStream>> {

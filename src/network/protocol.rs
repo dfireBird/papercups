@@ -1,4 +1,4 @@
-use std::{fs, str};
+use std::{fs, path::Path, str};
 
 use anyhow::{anyhow, Context, Result};
 
@@ -41,6 +41,10 @@ impl Serializable for ProtocolMessage {
 pub struct Message(String);
 
 impl Message {
+    pub fn new(msg: String) -> Self {
+        Self(msg)
+    }
+
     pub fn message(&self) -> String {
         self.0.clone()
     }
@@ -70,6 +74,15 @@ pub struct File {
 }
 
 impl File {
+    pub fn new(path: &Path) -> Option<Self> {
+        if path.exists() && path.is_file() {
+            let data = fs::read(path).unwrap(); // TODO: handle fs errors
+            let name = path.file_name().unwrap().to_str().unwrap().to_string();
+            Some(Self { name, data })
+        } else {
+            None
+        }
+    }
     pub fn save(&self) {
         let mut file_path = dirs::download_dir().unwrap();
         file_path.push(&self.name);
