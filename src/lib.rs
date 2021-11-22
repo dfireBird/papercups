@@ -2,11 +2,16 @@ mod app;
 mod network;
 mod ui;
 
-use std::net::IpAddr;
+use std::{net::IpAddr, sync::mpsc};
 
+use anyhow::Result;
 use rand::Rng;
 
-use crate::network::protocol::{File, Message};
+use crate::app::App;
+use crate::network::{
+    protocol::{File, Message},
+    Server,
+};
 
 pub const DEFAULT_PORT: u16 = 42069;
 
@@ -22,4 +27,12 @@ pub enum ChannelMessage {
 pub fn generate_id() -> u32 {
     let mut rng = rand::thread_rng();
     rng.gen()
+}
+
+pub fn start_papercups() -> Result<()> {
+    let (stx, srx) = mpsc::channel();
+    let (atx, arx) = mpsc::channel();
+    let app = App::new(arx, atx);
+    let server = Server::new(srx, stx);
+    app.start(server)
 }

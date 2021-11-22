@@ -1,6 +1,6 @@
 use anyhow::Result;
+use papercups::start_papercups;
 
 fn main() -> Result<()> {
-    println!("Hello, world!");
-    Ok(())
+    start_papercups()
 }
