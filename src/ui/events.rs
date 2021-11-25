@@ -15,7 +15,6 @@ pub enum Event<I> {
 
 pub struct Events {
     rx: mpsc::Receiver<Event<KeyEvent>>,
-    poll_handle: thread::JoinHandle<()>,
 }
 
 impl Events {
@@ -23,7 +22,7 @@ impl Events {
         let (tx, rx) = mpsc::channel();
         let tick_rate = Duration::from_millis(TICK_RATE);
 
-        let poll_handle = thread::spawn(move || {
+        thread::spawn(move || {
             let mut last_tick = Instant::now();
             loop {
                 // poll for tick raet duration, if no events send tick event
@@ -43,7 +42,7 @@ impl Events {
             }
         });
 
-        Events { rx, poll_handle }
+        Events { rx }
     }
 
     pub fn next(&self) -> Result<Event<KeyEvent>, mpsc::RecvError> {

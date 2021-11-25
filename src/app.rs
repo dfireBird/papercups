@@ -54,15 +54,13 @@ impl App {
     }
 
     pub fn start(mut self, server: Server) -> Result<()> {
-        let handle = thread::spawn(|| server.start_server());
+        thread::spawn(|| server.start_server());
         let mut term = ui::initialize_term()?;
 
         self.start_ui_loop(&mut term)?;
 
         ui::deinitialize_term(term)?;
-        handle
-            .join()
-            .expect("Couldn't join on the associated thread")
+        Ok(())
     }
 
     fn start_ui_loop(&mut self, term: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
