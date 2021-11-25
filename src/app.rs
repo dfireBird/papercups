@@ -117,7 +117,11 @@ impl App {
             match input.code {
                 KeyCode::Enter => {
                     let input: String = self.state.input.drain(..).collect();
-                    match Command::try_parse_from(input.split_whitespace()) {
+
+                    let mut splits = vec![&input[0..1]];
+                    splits.append(&mut input[1..].split_whitespace().collect());
+
+                    match Command::try_parse_from(splits) {
                         Ok(command) => match command.subcmd {
                             Commands::Connect(c) => {
                                 let ip = IpAddr::from_str(&c.ip)?;
