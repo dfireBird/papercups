@@ -1,4 +1,3 @@
-use anyhow::Result;
 use tui::{
     style::{Color, Style},
     text::{Span, Spans},
@@ -12,8 +11,8 @@ pub fn message_box(messages: &Vec<(MsgType, String)>) -> List {
         .iter()
         .map(|(a, m)| -> ListItem {
             ListItem::new(match a {
-                MsgType::Recv => vec![Spans::from(Span::raw(format!("You: {}", m)))],
-                MsgType::Sent => vec![Spans::from(Span::raw(format!("Other: {}", m)))],
+                MsgType::Sent => vec![Spans::from(Span::raw(format!("You: {}", m)))],
+                MsgType::Recv => vec![Spans::from(Span::raw(format!("Other: {}", m)))],
             })
         })
         .collect();
