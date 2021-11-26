@@ -30,8 +30,8 @@ pub fn generate_id() -> u32 {
 }
 
 pub fn start_papercups() -> Result<()> {
-    let (stx, srx) = mpsc::channel();
-    let (atx, arx) = mpsc::channel();
+    let (atx, srx) = mpsc::channel();
+    let (stx, arx) = mpsc::channel();
     let app = App::new(arx, atx);
     let server = Server::new(srx, stx);
     app.start(server)
