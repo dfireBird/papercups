@@ -54,7 +54,7 @@ impl Serializable for Message {
     fn to_bytes(&self) -> Vec<u8> {
         let message = self.0.as_bytes().to_vec();
         let mut data = Vec::from("chat".as_bytes());
-        data.append(&mut message.len().to_be_bytes().to_vec());
+        data.append(&mut (message.len() as u32).to_be_bytes().to_vec());
         data.append(&mut message.to_vec());
         data
     }
@@ -96,7 +96,7 @@ impl Serializable for File {
         padded_file_name.append(&mut self.name.as_bytes().to_vec());
 
         let mut data = Vec::from("file".as_bytes());
-        data.append(&mut (96 + self.data.len()).to_be_bytes().to_vec());
+        data.append(&mut (96 + self.data.len() as u32).to_be_bytes().to_vec());
         data.append(&mut padded_file_name);
         data.append(&mut self.data.clone());
         data
