@@ -110,7 +110,9 @@ impl Serializable for File {
         Ok(Self {
             data: data[105..].to_vec(),
             name: String::from_utf8(data[8..104].to_vec())
-                .context("Name of the file is not a valid UTF-8 string")?,
+                .context("Name of the file is not a valid UTF-8 string")?
+                .trim_matches(char::from(0))
+                .to_string(),
         })
     }
 }
