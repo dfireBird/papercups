@@ -84,9 +84,13 @@ impl File {
         }
     }
     pub fn save(&self) {
-        let mut file_path = dirs::download_dir().unwrap();
-        file_path.push(&self.name);
-        fs::write(file_path, &self.data).unwrap();
+        let mut download_path = dirs::download_dir().unwrap();
+        download_path.push(env!("CARGO_PKG_NAME"));
+        if !download_path.exists() && !download_path.is_dir() {
+            fs::create_dir(&download_path).unwrap();
+        }
+        download_path.push(&self.name);
+        fs::write(download_path, &self.data).unwrap();
     }
 }
 
