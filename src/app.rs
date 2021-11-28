@@ -90,7 +90,12 @@ impl App {
                 ChannelMessage::Message(msg) => {
                     self.state.messages.push((MsgType::Recv, msg.message()))
                 }
-                ChannelMessage::File(file) => file.save(),
+                ChannelMessage::File(file) => {
+                    file.save();
+                    self.state
+                        .messages
+                        .push((MsgType::Recv, "sent a file".to_string()))
+                }
                 ChannelMessage::Disconnect => self.client = None,
                 _ => (),
             };
@@ -141,6 +146,9 @@ impl App {
                                     if let Some(client) = &self.client {
                                         let mut client = client;
                                         client.write(&file.to_bytes())?;
+                                        self.state
+                                            .messages
+                                            .push((MsgType::Sent, "sent a file".to_string()));
                                     } // TODO: handle not connected case
                                 } // TODO: handle None case
                             }
