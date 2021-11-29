@@ -160,6 +160,9 @@ impl App {
                                     } // TODO: handle not connected case
                                 } // TODO: handle None case
                             }
+                            Commands::Quit => {
+                                return Ok(true);
+                            }
                         },
                         Err(_) => {
                             if let Some(client) = &self.client {
@@ -223,6 +226,7 @@ enum Commands {
     Connect(ConnectCommand),
     Disconnect,
     File(FileCommnad),
+    Quit,
 }
 
 #[derive(Debug, Parser)]
