@@ -108,11 +108,19 @@ impl App {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(2)
-                .constraints([Constraint::Min(15), Constraint::Length(3)].as_ref())
+                .constraints(
+                    [
+                        Constraint::Length(1),
+                        Constraint::Min(15),
+                        Constraint::Length(3),
+                    ]
+                    .as_ref(),
+                )
                 .split(f.size());
 
-            f.render_widget(widgets::message_box(&self.state.messages), chunks[0]);
-            f.render_widget(widgets::input_box(&self.state.input), chunks[1]);
+            f.render_widget(widgets::connection_status_message(&self.client), chunks[0]);
+            f.render_widget(widgets::message_box(&self.state.messages), chunks[1]);
+            f.render_widget(widgets::input_box(&self.state.input), chunks[2]);
         })?;
         Ok(())
     }
@@ -204,25 +212,25 @@ impl Default for State {
     }
 }
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 struct Command {
     #[clap(subcommand)]
     subcmd: Commands,
 }
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 enum Commands {
     Connect(ConnectCommand),
     Disconnect,
     File(FileCommnad),
 }
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 struct ConnectCommand {
     ip: String,
 }
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 struct FileCommnad {
     path: String,
 }
