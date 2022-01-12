@@ -1,3 +1,7 @@
+mod dialog_box;
+
+pub use dialog_box::{DialogBox, DialogState};
+
 use std::net::TcpStream;
 
 use tui::{
