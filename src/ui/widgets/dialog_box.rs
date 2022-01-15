@@ -1,12 +1,13 @@
 use tui::{
     buffer::Buffer,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
     widgets::{Block, BorderType, Borders, Paragraph, StatefulWidget, Widget},
 };
 
 /// DialogBoxState is associate type used for stateful render of Dialogbox
+#[derive(Debug)]
 pub struct DialogState {
     is_yes: bool,
 }
@@ -55,13 +56,13 @@ impl StatefulWidget for DialogBox {
 
         let splitted_area = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(10), Constraint::Max(15)])
+            .constraints([Constraint::Percentage(80), Constraint::Percentage(20)])
             .split(render_area);
         let msg_area = splitted_area[0];
         let input_areas = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(80),
+                Constraint::Percentage(60),
                 Constraint::Percentage(20),
                 Constraint::Percentage(20),
             ])
@@ -76,20 +77,22 @@ impl StatefulWidget for DialogBox {
         let positive_msg = Paragraph::new(vec![Spans::from(vec![
             Span::styled("Y", Style::default().add_modifier(Modifier::UNDERLINED)),
             Span::raw("es"),
-        ])]);
+        ])])
+        .alignment(Alignment::Center);
         positive_msg.render(positive_input_area, buf);
 
         let negative_msg = Paragraph::new(vec![Spans::from(vec![
             Span::styled("N", Style::default().add_modifier(Modifier::UNDERLINED)),
             Span::raw("o"),
-        ])]);
+        ])])
+        .alignment(Alignment::Center);
         negative_msg.render(negative_input_area, buf);
 
         let highlight_style = Style::default().fg(Color::Black);
         if state.is_yes {
-            buf.set_style(positive_input_area, highlight_style.fg(Color::LightGreen));
+            buf.set_style(positive_input_area, highlight_style.bg(Color::LightGreen));
         } else {
-            buf.set_style(negative_input_area, highlight_style.fg(Color::LightRed));
+            buf.set_style(negative_input_area, highlight_style.bg(Color::LightRed));
         }
     }
 }
