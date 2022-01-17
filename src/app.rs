@@ -1,4 +1,5 @@
 use std::{
+    fmt::Debug,
     io::{Read, Stdout, Write},
     net::{IpAddr, TcpStream},
     path::Path,
@@ -24,7 +25,7 @@ use crate::{
     ui::{
         self,
         events::{Event, Events},
-        widgets,
+        widgets::{self, DialogState},
     },
     ChannelMessage, DEFAULT_PORT,
 };
@@ -36,6 +37,7 @@ type Client = TcpStream;
 #[derive(Debug)]
 pub struct App {
     client: Option<Client>,
+    mode: AppMode,
     state: State,
     rx: Receiver<ChannelMessage>,
     tx: Sender<ChannelMessage>,
@@ -46,6 +48,7 @@ impl App {
     pub fn new(rx: Receiver<ChannelMessage>, tx: Sender<ChannelMessage>) -> Self {
         Self {
             client: None,
+            mode: AppMode::Standard,
             state: State::default(),
             id: crate::generate_id(),
             rx,
@@ -193,6 +196,25 @@ impl App {
     }
 }
 
+/// AppMode specifies which mode App is currently in
+enum AppMode {
+    Standard,
+    DialogBox(
+        String,
+        Box<dyn FnMut() -> Result<()>>,
+        Box<dyn FnMut() -> Result<()>>,
+    ),
+}
+
+impl Debug for AppMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Standard => write!(f, "Standard"),
+            Self::DialogBox(arg0, _, _) => f.debug_tuple("DialogBox").field(arg0).finish(),
+        }
+    }
+}
+
 /// Classifies the messages based on whether is received or sent
 #[derive(Debug)]
 pub enum MsgType {
@@ -204,6 +226,7 @@ pub enum MsgType {
 struct State {
     messages: Vec<(MsgType, String)>,
     input: String,
+    dialog_state: Option<DialogState>,
 }
 
 impl Default for State {
@@ -211,6 +234,7 @@ impl Default for State {
         Self {
             messages: Vec::new(),
             input: String::new(),
+            dialog_state: None,
         }
     }
 }
