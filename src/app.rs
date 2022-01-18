@@ -197,22 +197,10 @@ impl App {
 }
 
 /// AppMode specifies which mode App is currently in
+#[derive(Debug)]
 enum AppMode {
     Standard,
-    DialogBox(
-        String,
-        Box<dyn FnMut() -> Result<()>>,
-        Box<dyn FnMut() -> Result<()>>,
-    ),
-}
-
-impl Debug for AppMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Standard => write!(f, "Standard"),
-            Self::DialogBox(arg0, _, _) => f.debug_tuple("DialogBox").field(arg0).finish(),
-        }
-    }
+    DialogBox(String),
 }
 
 /// Classifies the messages based on whether is received or sent

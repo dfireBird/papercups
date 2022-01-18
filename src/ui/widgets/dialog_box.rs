@@ -1,3 +1,7 @@
+use std::fmt::Debug;
+
+use anyhow::Result;
+
 use tui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -6,10 +10,15 @@ use tui::{
     widgets::{Block, BorderType, Borders, Paragraph, StatefulWidget, Widget},
 };
 
+use crate::App;
+
+type DialogCallback = Box<dyn Fn(&mut App) -> Result<()>>;
+
 /// DialogBoxState is associate type used for stateful render of Dialogbox
-#[derive(Debug)]
 pub struct DialogState {
     is_yes: bool,
+    pub yes_fn: DialogCallback,
+    pub no_fn: DialogCallback,
 }
 
 impl DialogState {
@@ -20,11 +29,31 @@ impl DialogState {
     pub fn toggle(&mut self) {
         self.is_yes = !self.is_yes
     }
+
+    pub fn new(yes_fn: DialogCallback, no_fn: DialogCallback) -> Self {
+        Self {
+            is_yes: false,
+            yes_fn,
+            no_fn,
+        }
+    }
+}
+
+impl Debug for DialogState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DialogState")
+            .field("is_yes", &self.is_yes)
+            .finish()
+    }
 }
 
 impl Default for DialogState {
     fn default() -> Self {
-        Self { is_yes: false }
+        Self {
+            is_yes: false,
+            yes_fn: Box::new(|_| Ok(())),
+            no_fn: Box::new(|_| Ok(())),
+        }
     }
 }
 
