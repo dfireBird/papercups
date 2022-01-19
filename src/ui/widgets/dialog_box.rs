@@ -6,7 +6,7 @@ use tui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
+    text::{Span, Spans, Text},
     widgets::{Block, BorderType, Borders, Paragraph, StatefulWidget, Widget},
 };
 
@@ -100,7 +100,7 @@ impl StatefulWidget for DialogBox {
         let positive_input_area = input_areas[1];
         let negative_input_area = input_areas[2];
 
-        let msg = Paragraph::new(Span::from(self.msg));
+        let msg = Paragraph::new(Text::from(self.msg)).alignment(Alignment::Center);
         msg.render(msg_area, buf);
 
         let positive_msg = Paragraph::new(vec![Spans::from(vec![
