@@ -94,6 +94,9 @@ impl Server {
         if let ChannelMessage::ConnectAccept = self.rx.recv()? {
             peer.write(&handshake.to_bytes())?;
             self.peer_stream = Some(peer);
+        } else {
+            peer.write(&Handshake::new(0).to_bytes())?;
+            peer.shutdown(Shutdown::Both)?;
         }
 
         Ok(())

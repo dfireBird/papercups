@@ -93,11 +93,14 @@ impl App {
                             if let None = app.client {
                                 if let Some(stream) = initiate_client(app.id, ip)? {
                                     app.client = Some(stream);
-                                } // TODO: Should display error message when client sent an wrong handshake
+                                } // TODO: Should log error when client sent an wrong handshake
                             }
                             Ok(())
                         }),
-                        Box::new(|_| Ok(())),
+                        Box::new(|app| {
+                            app.tx.send(ChannelMessage::Disconnect)?;
+                            Ok(())
+                        }),
                     ));
                 }
                 ChannelMessage::Message(msg) => {

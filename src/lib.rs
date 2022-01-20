@@ -26,7 +26,12 @@ pub enum ChannelMessage {
 
 pub fn generate_id() -> u32 {
     let mut rng = rand::thread_rng();
-    rng.gen()
+    loop {
+        let id = rng.gen();
+        if id != 0 {
+            break id;
+        }
+    }
 }
 
 pub fn start_papercups() -> Result<()> {
