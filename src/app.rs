@@ -14,6 +14,7 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
+    widgets::Clear,
     Terminal,
 };
 
@@ -25,7 +26,7 @@ use crate::{
     ui::{
         self,
         events::{Event, Events},
-        widgets::{self, DialogState},
+        widgets::{self, DialogBox, DialogState},
     },
     ChannelMessage, DEFAULT_PORT,
 };
@@ -83,21 +84,39 @@ impl App {
         for message in self.rx.try_iter() {
             match message {
                 ChannelMessage::ConnectRequest(id, ip) => {
-                    self.tx.send(ChannelMessage::ConnectAccept)?;
-                    if let None = self.client {
-                        if let Some(stream) = initiate_client(self.id, ip)? {
-                            self.client = Some(stream)
-                        } // TODO: Should display error message when client sent an wrong handshake
-                    }
+                    self.mode = AppMode::DialogBox(format!(
+                        "A connection request has been made by {ip} \nDo you want to accept?"
+                    ));
+                    self.state.dialog_state = Some(DialogState::new(
+                        Box::new(move |app| {
+                            app.tx.send(ChannelMessage::ConnectAccept)?;
+                            if let None = app.client {
+                                if let Some(stream) = initiate_client(app.id, ip)? {
+                                    app.client = Some(stream);
+                                } // TODO: Should display error message when client sent an wrong handshake
+                            }
+                            Ok(())
+                        }),
+                        Box::new(|_| Ok(())),
+                    ));
                 }
                 ChannelMessage::Message(msg) => {
                     self.state.messages.push((MsgType::Recv, msg.message()))
                 }
                 ChannelMessage::File(file) => {
-                    file.save();
-                    self.state
-                        .messages
-                        .push((MsgType::Recv, "sent a file".to_string()))
+                    self.mode = AppMode::DialogBox(
+                        "A file has been sent by the peer \nDo you want to save it?".to_string(),
+                    );
+                    self.state.dialog_state = Some(DialogState::new(
+                        Box::new(move |app| {
+                            file.save();
+                            Ok(app
+                                .state
+                                .messages
+                                .push((MsgType::Recv, "sent a file".to_string())))
+                        }),
+                        Box::new(|_| Ok(())),
+                    ));
                 }
                 ChannelMessage::Disconnect => self.client = None,
                 _ => (),
@@ -124,6 +143,16 @@ impl App {
             f.render_widget(widgets::connection_status_message(&self.client), chunks[0]);
             f.render_widget(widgets::message_box(&self.state.messages), chunks[1]);
             f.render_widget(widgets::input_box(&self.state.input), chunks[2]);
+
+            if let AppMode::DialogBox(msg) = &self.mode {
+                let centered_area = widgets::centered_rect(35, 20, f.size());
+                f.render_widget(Clear, centered_area);
+                f.render_stateful_widget(
+                    DialogBox::new(msg.to_string()),
+                    centered_area,
+                    &mut self.state.dialog_state.as_mut().unwrap(),
+                );
+            }
         })?;
         Ok(())
     }
@@ -132,49 +161,73 @@ impl App {
         if let Event::Input(input) = events.next()? {
             match input.code {
                 KeyCode::Enter => {
-                    let input: String = self.state.input.drain(..).collect();
+                    match self.mode {
+                        AppMode::Standard => {
+                            let input: String = self.state.input.drain(..).collect();
 
-                    let mut splits = vec![&input[0..1]];
-                    splits.append(&mut input[1..].split_whitespace().collect());
+                            let mut splits = vec![&input[0..1]];
+                            splits.append(&mut input[1..].split_whitespace().collect());
 
-                    match Command::try_parse_from(splits) {
-                        Ok(command) => match command.subcmd {
-                            Commands::Connect(c) => {
-                                let ip = IpAddr::from_str(&c.ip)?;
-                                if let Some(stream) = initiate_client(self.id, ip)? {
-                                    self.client = Some(stream)
-                                } // TODO: Should display error message when client sent an wrong handshake
-                            }
-                            Commands::Disconnect => {
-                                if let Some(_) = self.client {
-                                    self.tx.send(ChannelMessage::Disconnect)?;
-                                    self.client = None;
-                                }
-                            }
-                            Commands::File(file) => {
-                                let path = Path::new(&file.path);
-                                if let Some(file) = File::new(path) {
+                            match Command::try_parse_from(splits) {
+                                Ok(command) => match command.subcmd {
+                                    Commands::Connect(c) => {
+                                        let ip = IpAddr::from_str(&c.ip)?;
+                                        if let Some(stream) = initiate_client(self.id, ip)? {
+                                            self.client = Some(stream)
+                                        } // TODO: Should display error message when client sent an wrong handshake
+                                    }
+                                    Commands::Disconnect => {
+                                        if let Some(_) = self.client {
+                                            self.tx.send(ChannelMessage::Disconnect)?;
+                                            self.client = None;
+                                        }
+                                    }
+                                    Commands::File(file) => {
+                                        let path = Path::new(&file.path);
+                                        if let Some(file) = File::new(path) {
+                                            if let Some(client) = &self.client {
+                                                let mut client = client;
+                                                client.write(&file.to_bytes())?;
+                                                self.state.messages.push((
+                                                    MsgType::Sent,
+                                                    "sent a file".to_string(),
+                                                ));
+                                            } // TODO: handle not connected case
+                                        } // TODO: handle None case
+                                    }
+                                    Commands::Quit => {
+                                        return Ok(true);
+                                    }
+                                },
+                                Err(_) => {
                                     if let Some(client) = &self.client {
                                         let mut client = client;
-                                        client.write(&file.to_bytes())?;
-                                        self.state
-                                            .messages
-                                            .push((MsgType::Sent, "sent a file".to_string()));
+                                        let msg = Message::new(input);
+                                        client.write(&msg.to_bytes())?;
+                                        self.state.messages.push((MsgType::Sent, msg.message()));
                                     } // TODO: handle not connected case
-                                } // TODO: handle None case
+                                }
                             }
-                            Commands::Quit => {
-                                return Ok(true);
-                            }
-                        },
-                        Err(_) => {
-                            if let Some(client) = &self.client {
-                                let mut client = client;
-                                let msg = Message::new(input);
-                                client.write(&msg.to_bytes())?;
-                                self.state.messages.push((MsgType::Sent, msg.message()));
-                            } // TODO: handle not connected case
                         }
+                        AppMode::DialogBox(_) => {
+                            let answer = self.state.dialog_state.take().unwrap();
+                            if answer.is_yes() {
+                                (answer.yes_fn)(self)?;
+                            } else {
+                                (answer.no_fn)(self)?;
+                            }
+                            self.mode = AppMode::Standard;
+                        }
+                    }
+                }
+                KeyCode::Left => {
+                    if let AppMode::DialogBox(_) = self.mode {
+                        self.state.dialog_state.as_mut().unwrap().toggle();
+                    }
+                }
+                KeyCode::Right => {
+                    if let AppMode::DialogBox(_) = self.mode {
+                        self.state.dialog_state.as_mut().unwrap().toggle();
                     }
                 }
                 KeyCode::Char(c) if c == 'd' && input.modifiers == KeyModifiers::CONTROL => {
@@ -184,10 +237,14 @@ impl App {
                     return Ok(true);
                 }
                 KeyCode::Char(c) => {
-                    self.state.input.push(c);
+                    if let AppMode::Standard = self.mode {
+                        self.state.input.push(c);
+                    }
                 }
                 KeyCode::Backspace => {
-                    self.state.input.pop();
+                    if let AppMode::Standard = self.mode {
+                        self.state.input.pop();
+                    }
                 }
                 _ => (),
             }
