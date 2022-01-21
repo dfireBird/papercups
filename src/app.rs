@@ -84,24 +84,28 @@ impl App {
         for message in self.rx.try_iter() {
             match message {
                 ChannelMessage::ConnectRequest(id, ip) => {
-                    self.mode = AppMode::DialogBox(format!(
-                        "A connection request has been made by {ip} \nDo you want to accept?"
-                    ));
-                    self.state.dialog_state = Some(DialogState::new(
-                        Box::new(move |app| {
-                            app.tx.send(ChannelMessage::ConnectAccept)?;
-                            if let None = app.client {
-                                if let Some(stream) = initiate_client(app.id, ip)? {
-                                    app.client = Some(stream);
-                                } // TODO: Should log error when client sent an wrong handshake
-                            }
-                            Ok(())
-                        }),
-                        Box::new(|app| {
-                            app.tx.send(ChannelMessage::Disconnect)?;
-                            Ok(())
-                        }),
-                    ));
+                    if let None = self.client {
+                        self.mode = AppMode::DialogBox(format!(
+                            "A connection request has been made by {ip} \nDo you want to accept?"
+                        ));
+                        self.state.dialog_state = Some(DialogState::new(
+                            Box::new(move |app| {
+                                app.tx.send(ChannelMessage::ConnectAccept)?;
+                                if let None = app.client {
+                                    if let Some(stream) = initiate_client(app.id, ip)? {
+                                        app.client = Some(stream);
+                                    } // TODO: Should log error when client sent an wrong handshake
+                                }
+                                Ok(())
+                            }),
+                            Box::new(|app| {
+                                app.tx.send(ChannelMessage::Disconnect)?;
+                                Ok(())
+                            }),
+                        ));
+                    } else {
+                        self.tx.send(ChannelMessage::ConnectAccept)?;
+                    }
                 }
                 ChannelMessage::Message(msg) => {
                     self.state.messages.push((MsgType::Recv, msg.message()))
