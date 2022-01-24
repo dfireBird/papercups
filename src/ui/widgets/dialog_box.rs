@@ -57,14 +57,24 @@ impl Default for DialogState {
     }
 }
 
+/// Enum indicates whether the DialogBox is for showing information or for making
+/// decisions
+#[derive(Debug, Clone, Copy)]
+pub enum DialogBoxType {
+    Info,
+    Decision,
+}
+
 /// Custom widget that opens a popup to get user input
+#[derive(Debug)]
 pub struct DialogBox {
     msg: String,
+    d_type: DialogBoxType,
 }
 
 impl DialogBox {
-    pub fn new(msg: String) -> Self {
-        Self { msg }
+    pub fn new(msg: String, d_type: DialogBoxType) -> Self {
+        Self { msg, d_type }
     }
 }
 
@@ -88,40 +98,60 @@ impl StatefulWidget for DialogBox {
             .constraints([Constraint::Percentage(80), Constraint::Percentage(20)])
             .split(render_area);
         let msg_area = splitted_area[0];
-        let input_areas = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(60),
-                Constraint::Percentage(20),
-                Constraint::Percentage(20),
-            ])
-            .split(splitted_area[1]);
-
-        let positive_input_area = input_areas[1];
-        let negative_input_area = input_areas[2];
 
         let msg = Paragraph::new(Text::from(self.msg)).alignment(Alignment::Center);
         msg.render(msg_area, buf);
 
-        let positive_msg = Paragraph::new(vec![Spans::from(vec![
-            Span::styled("Y", Style::default().add_modifier(Modifier::UNDERLINED)),
-            Span::raw("es"),
-        ])])
-        .alignment(Alignment::Center);
-        positive_msg.render(positive_input_area, buf);
+        match self.d_type {
+            DialogBoxType::Decision => {
+                let input_areas = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([
+                        Constraint::Percentage(60),
+                        Constraint::Percentage(20),
+                        Constraint::Percentage(20),
+                    ])
+                    .split(splitted_area[1]);
 
-        let negative_msg = Paragraph::new(vec![Spans::from(vec![
-            Span::styled("N", Style::default().add_modifier(Modifier::UNDERLINED)),
-            Span::raw("o"),
-        ])])
-        .alignment(Alignment::Center);
-        negative_msg.render(negative_input_area, buf);
+                let positive_input_area = input_areas[1];
+                let negative_input_area = input_areas[2];
 
-        let highlight_style = Style::default().fg(Color::Black);
-        if state.is_yes {
-            buf.set_style(positive_input_area, highlight_style.bg(Color::LightGreen));
-        } else {
-            buf.set_style(negative_input_area, highlight_style.bg(Color::LightRed));
+                let positive_msg = Paragraph::new(vec![Spans::from(vec![
+                    Span::styled("Y", Style::default().add_modifier(Modifier::UNDERLINED)),
+                    Span::raw("es"),
+                ])])
+                .alignment(Alignment::Center);
+                positive_msg.render(positive_input_area, buf);
+
+                let negative_msg = Paragraph::new(vec![Spans::from(vec![
+                    Span::styled("N", Style::default().add_modifier(Modifier::UNDERLINED)),
+                    Span::raw("o"),
+                ])])
+                .alignment(Alignment::Center);
+                negative_msg.render(negative_input_area, buf);
+
+                let highlight_style = Style::default().fg(Color::Black);
+                if state.is_yes {
+                    buf.set_style(positive_input_area, highlight_style.bg(Color::LightGreen));
+                } else {
+                    buf.set_style(negative_input_area, highlight_style.bg(Color::LightRed));
+                }
+            }
+            DialogBoxType::Info => {
+                let input_areas = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([Constraint::Percentage(90), Constraint::Percentage(10)])
+                    .split(splitted_area[1]);
+
+                let msg = Paragraph::new(vec![Spans::from(vec![
+                    Span::styled("O", Style::default().add_modifier(Modifier::UNDERLINED)),
+                    Span::raw("k"),
+                ])])
+                .alignment(Alignment::Center);
+                msg.render(input_areas[1], buf);
+
+                buf.set_style(input_areas[1], Style::default().fg(Color::Black));
+            }
         }
     }
 }

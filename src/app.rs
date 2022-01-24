@@ -26,7 +26,7 @@ use crate::{
     ui::{
         self,
         events::{Event, Events},
-        widgets::{self, DialogBox, DialogState},
+        widgets::{self, DialogBox, DialogBoxType, DialogState},
     },
     ChannelMessage, DEFAULT_PORT,
 };
@@ -85,9 +85,10 @@ impl App {
             match message {
                 ChannelMessage::ConnectRequest(id, ip) => {
                     if let None = self.client {
-                        self.mode = AppMode::DialogBox(format!(
-                            "A connection request has been made by {ip} \nDo you want to accept?"
-                        ));
+                        self.mode = AppMode::DialogBox(
+                            format!("A connection request has been made by {ip} \nDo you want to accept?"),
+                            DialogBoxType::Decision
+                        );
                         self.state.dialog_state = Some(DialogState::new(
                             Box::new(move |app| {
                                 app.tx.send(ChannelMessage::ConnectAccept)?;
@@ -113,6 +114,7 @@ impl App {
                 ChannelMessage::File(file) => {
                     self.mode = AppMode::DialogBox(
                         "A file has been sent by the peer \nDo you want to save it?".to_string(),
+                        DialogBoxType::Decision,
                     );
                     self.state.dialog_state = Some(DialogState::new(
                         Box::new(move |app| {
@@ -151,11 +153,11 @@ impl App {
             f.render_widget(widgets::message_box(&self.state.messages), chunks[1]);
             f.render_widget(widgets::input_box(&self.state.input), chunks[2]);
 
-            if let AppMode::DialogBox(msg) = &self.mode {
+            if let AppMode::DialogBox(msg, d_type) = &self.mode {
                 let centered_area = widgets::centered_rect(35, 20, f.size());
                 f.render_widget(Clear, centered_area);
                 f.render_stateful_widget(
-                    DialogBox::new(msg.to_string()),
+                    DialogBox::new(msg.to_string(), *d_type),
                     centered_area,
                     &mut self.state.dialog_state.as_mut().unwrap(),
                 );
@@ -216,7 +218,7 @@ impl App {
                                 }
                             }
                         }
-                        AppMode::DialogBox(_) => {
+                        AppMode::DialogBox(..) => {
                             let answer = self.state.dialog_state.take().unwrap();
                             if answer.is_yes() {
                                 (answer.yes_fn)(self)?;
@@ -228,12 +230,12 @@ impl App {
                     }
                 }
                 KeyCode::Left => {
-                    if let AppMode::DialogBox(_) = self.mode {
+                    if let AppMode::DialogBox(..) = self.mode {
                         self.state.dialog_state.as_mut().unwrap().toggle();
                     }
                 }
                 KeyCode::Right => {
-                    if let AppMode::DialogBox(_) = self.mode {
+                    if let AppMode::DialogBox(..) = self.mode {
                         self.state.dialog_state.as_mut().unwrap().toggle();
                     }
                 }
@@ -264,7 +266,7 @@ impl App {
 #[derive(Debug)]
 enum AppMode {
     Standard,
-    DialogBox(String),
+    DialogBox(String, DialogBoxType),
 }
 
 /// Classifies the messages based on whether is received or sent
