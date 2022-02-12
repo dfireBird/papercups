@@ -26,7 +26,7 @@ use crate::{
     ui::{
         self,
         events::{Event, Events},
-        widgets::{self, DialogBox, DialogBoxType, DialogState},
+        widgets::{self, DialogBox, DialogBoxType, DialogCallback, DialogState},
     },
     ChannelMessage, DEFAULT_PORT,
 };
@@ -85,11 +85,12 @@ impl App {
             match message {
                 ChannelMessage::ConnectRequest(id, ip) => {
                     if let None = self.client {
-                        self.mode = AppMode::DialogBox(
-                            format!("A connection request has been made by {ip} \nDo you want to accept?"),
-                            DialogBoxType::Decision
+                        let msg = format!(
+                            "A connection request has been made by {ip} \nDo you want to accept?"
                         );
-                        self.state.dialog_state = Some(DialogState::new(
+                        // TODO: In Rust 1.59.0 change into destructing assingment
+                        let (mode, dialog_state) = decision_dialog_box(
+                            msg,
                             Box::new(move |app| {
                                 app.tx.send(ChannelMessage::ConnectAccept)?;
                                 if let None = app.client {
@@ -103,7 +104,9 @@ impl App {
                                 app.tx.send(ChannelMessage::Disconnect)?;
                                 Ok(())
                             }),
-                        ));
+                        );
+                        self.mode = mode;
+                        self.state.dialog_state = dialog_state;
                     } else {
                         self.tx.send(ChannelMessage::ConnectAccept)?;
                     }
@@ -112,11 +115,11 @@ impl App {
                     self.state.messages.push((MsgType::Recv, msg.message()))
                 }
                 ChannelMessage::File(file) => {
-                    self.mode = AppMode::DialogBox(
-                        "A file has been sent by the peer \nDo you want to save it?".to_string(),
-                        DialogBoxType::Decision,
-                    );
-                    self.state.dialog_state = Some(DialogState::new(
+                    // TODO: In Rust 1.59.0 change into destructing assingment
+                    let msg =
+                        "A file has been sent by the peer \nDo you want to save it?".to_string();
+                    let (mode, dialog_state) = decision_dialog_box(
+                        msg,
                         Box::new(move |app| {
                             file.save();
                             Ok(app
@@ -125,7 +128,9 @@ impl App {
                                 .push((MsgType::Recv, "sent a file".to_string())))
                         }),
                         Box::new(|_| Ok(())),
-                    ));
+                    );
+                    self.mode = mode;
+                    self.state.dialog_state = dialog_state;
                 }
                 ChannelMessage::Disconnect => self.client = None,
                 _ => (),
@@ -333,4 +338,22 @@ fn initiate_client(id: u32, ip: IpAddr) -> Result<Option<TcpStream>> {
     } else {
         Ok(None)
     }
+}
+
+fn decision_dialog_box(
+    msg: String,
+    yes_fn: DialogCallback,
+    no_fn: DialogCallback,
+) -> (AppMode, Option<DialogState>) {
+    (
+        AppMode::DialogBox(msg, DialogBoxType::Decision),
+        Some(DialogState::new(yes_fn, no_fn)),
+    )
+}
+
+fn info_dialog_box(msg: String) -> (AppMode, Option<DialogState>) {
+    (
+        AppMode::DialogBox(msg, DialogBoxType::Info),
+        Some(DialogState::default()),
+    )
 }

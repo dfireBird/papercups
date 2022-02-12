@@ -1,6 +1,6 @@
 mod dialog_box;
 
-pub use dialog_box::{DialogBox, DialogBoxType, DialogState};
+pub use dialog_box::{DialogBox, DialogBoxType, DialogCallback, DialogState};
 
 use std::net::TcpStream;
 

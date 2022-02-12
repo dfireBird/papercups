@@ -12,7 +12,7 @@ use tui::{
 
 use crate::App;
 
-type DialogCallback = Box<dyn Fn(&mut App) -> Result<()>>;
+pub type DialogCallback = Box<dyn Fn(&mut App) -> Result<()>>;
 
 /// DialogBoxState is associate type used for stateful render of Dialogbox
 pub struct DialogState {
