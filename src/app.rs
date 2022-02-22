@@ -188,7 +188,12 @@ impl App {
                                         let ip = IpAddr::from_str(&c.ip)?;
                                         if let Some(stream) = initiate_client(self.id, ip)? {
                                             self.client = Some(stream)
-                                        } // TODO: Should display error message when client sent an wrong handshake
+                                        } else {
+                                            let msg = "Not able to connect successfully. \nThe peer sent a wrong handshake.";
+                                            let (mode, state) = info_dialog_box(msg.to_string());
+                                            self.mode = mode;
+                                            self.state.dialog_state = state;
+                                        }
                                     }
                                     Commands::Disconnect => {
                                         if let Some(_) = self.client {
