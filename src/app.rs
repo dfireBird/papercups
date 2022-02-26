@@ -88,8 +88,7 @@ impl App {
                         let msg = format!(
                             "A connection request has been made by {ip} \nDo you want to accept?"
                         );
-                        // TODO: In Rust 1.59.0 change into destructing assingment
-                        let (mode, dialog_state) = decision_dialog_box(
+                        (self.mode, self.state.dialog_state) = decision_dialog_box(
                             msg,
                             Box::new(move |app| {
                                 app.tx.send(ChannelMessage::ConnectAccept)?;
@@ -105,8 +104,6 @@ impl App {
                                 Ok(())
                             }),
                         );
-                        self.mode = mode;
-                        self.state.dialog_state = dialog_state;
                     } else {
                         self.tx.send(ChannelMessage::ConnectAccept)?;
                     }
@@ -115,10 +112,9 @@ impl App {
                     self.state.messages.push((MsgType::Recv, msg.message()))
                 }
                 ChannelMessage::File(file) => {
-                    // TODO: In Rust 1.59.0 change into destructing assingment
                     let msg =
                         "A file has been sent by the peer \nDo you want to save it?".to_string();
-                    let (mode, dialog_state) = decision_dialog_box(
+                    (self.mode, self.state.dialog_state) = decision_dialog_box(
                         msg,
                         Box::new(move |app| {
                             file.save();
@@ -129,8 +125,6 @@ impl App {
                         }),
                         Box::new(|_| Ok(())),
                     );
-                    self.mode = mode;
-                    self.state.dialog_state = dialog_state;
                 }
                 ChannelMessage::Disconnect => self.client = None,
                 _ => (),
@@ -190,9 +184,8 @@ impl App {
                                             self.client = Some(stream)
                                         } else {
                                             let msg = "Not able to connect successfully. \nThe peer sent a wrong handshake.";
-                                            let (mode, state) = info_dialog_box(msg.to_string());
-                                            self.mode = mode;
-                                            self.state.dialog_state = state;
+                                            (self.mode, self.state.dialog_state) =
+                                                info_dialog_box(msg.to_string());
                                         }
                                     }
                                     Commands::Disconnect => {
