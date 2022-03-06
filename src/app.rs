@@ -196,16 +196,16 @@ impl App {
                                     }
                                     Commands::File(file) => {
                                         let path = Path::new(&file.path);
-                                        if let Some(file) = File::new(path) {
-                                            if let Some(client) = &self.client {
+                                        if let Some(client) = &self.client {
+                                            if let Some(file) = File::new(path) {
                                                 let mut client = client;
                                                 client.write(&file.to_bytes())?;
                                                 self.state.messages.push((
                                                     MsgType::Sent,
                                                     "sent a file".to_string(),
                                                 ));
-                                            } // TODO: handle not connected case
-                                        } // TODO: handle None case
+                                            } // TODO: handle None case
+                                        } // TODO: handle not connected case
                                     }
                                     Commands::Quit => {
                                         return Ok(true);
