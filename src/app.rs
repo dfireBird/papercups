@@ -205,7 +205,11 @@ impl App {
                                                     "sent a file".to_string(),
                                                 ));
                                             } // TODO: handle None case
-                                        } // TODO: handle not connected case
+                                        } else {
+                                            let msg = "You are not connected to a peer.\n Connect to a peer using ?connect.";
+                                            (self.mode, self.state.dialog_state) =
+                                                info_dialog_box(msg.to_string());
+                                        }
                                     }
                                     Commands::Quit => {
                                         return Ok(true);
@@ -217,7 +221,11 @@ impl App {
                                         let msg = Message::new(input);
                                         client.write(&msg.to_bytes())?;
                                         self.state.messages.push((MsgType::Sent, msg.message()));
-                                    } // TODO: handle not connected case
+                                    } else {
+                                        let msg = "You are not connected to a peer.\n Connect to a peer using ?connect.";
+                                        (self.mode, self.state.dialog_state) =
+                                            info_dialog_box(msg.to_string());
+                                    }
                                 }
                             }
                         }
