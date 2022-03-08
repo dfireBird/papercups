@@ -168,78 +168,80 @@ impl App {
     fn handle_input(&mut self, events: &Events) -> Result<bool> {
         if let Event::Input(input) = events.next()? {
             match input.code {
-                KeyCode::Enter => {
-                    match self.mode {
-                        AppMode::Standard => {
-                            let input: String = self.state.input.drain(..).collect();
+                KeyCode::Enter => match self.mode {
+                    AppMode::Standard => {
+                        let input: String = self.state.input.drain(..).collect();
 
-                            let mut splits = vec![&input[0..1]];
-                            splits.append(&mut input[1..].split_whitespace().collect());
+                        let mut splits = vec![&input[0..1]];
+                        splits.append(&mut input[1..].split_whitespace().collect());
 
-                            match Command::try_parse_from(splits) {
-                                Ok(command) => match command.subcmd {
-                                    Commands::Connect(c) => {
-                                        let ip = IpAddr::from_str(&c.ip)?;
-                                        if let Some(stream) = initiate_client(self.id, ip)? {
-                                            self.client = Some(stream)
-                                        } else {
-                                            let msg = "Not able to connect successfully. \nThe peer sent a wrong handshake.";
-                                            (self.mode, self.state.dialog_state) =
-                                                info_dialog_box(msg.to_string());
-                                        }
+                        match Command::try_parse_from(splits) {
+                            Ok(command) => match command.subcmd {
+                                Commands::Connect(c) => {
+                                    let ip = IpAddr::from_str(&c.ip)?;
+                                    if let Some(stream) = initiate_client(self.id, ip)? {
+                                        self.client = Some(stream)
+                                    } else {
+                                        let msg = "Not able to connect successfully. \nThe peer sent a wrong handshake.";
+                                        (self.mode, self.state.dialog_state) =
+                                            info_dialog_box(msg.to_string());
                                     }
-                                    Commands::Disconnect => {
-                                        if let Some(_) = self.client {
-                                            self.tx.send(ChannelMessage::Disconnect)?;
-                                            self.client = None;
-                                        }
+                                }
+                                Commands::Disconnect => {
+                                    if let Some(_) = self.client {
+                                        self.tx.send(ChannelMessage::Disconnect)?;
+                                        self.client = None;
                                     }
-                                    Commands::File(file) => {
-                                        let path = Path::new(&file.path);
-                                        if let Some(client) = &self.client {
-                                            if let Some(file) = File::new(path) {
-                                                let mut client = client;
-                                                client.write(&file.to_bytes())?;
-                                                self.state.messages.push((
-                                                    MsgType::Sent,
-                                                    "sent a file".to_string(),
-                                                ));
-                                            } // TODO: handle None case
-                                        } else {
-                                            let msg = "You are not connected to a peer.\n Connect to a peer using ?connect.";
-                                            (self.mode, self.state.dialog_state) =
-                                                info_dialog_box(msg.to_string());
-                                        }
-                                    }
-                                    Commands::Quit => {
-                                        return Ok(true);
-                                    }
-                                },
-                                Err(_) => {
+                                }
+                                Commands::File(file) => {
+                                    let path = Path::new(&file.path);
                                     if let Some(client) = &self.client {
-                                        let mut client = client;
-                                        let msg = Message::new(input);
-                                        client.write(&msg.to_bytes())?;
-                                        self.state.messages.push((MsgType::Sent, msg.message()));
+                                        if let Some(file) = File::new(path) {
+                                            let mut client = client;
+                                            client.write(&file.to_bytes())?;
+                                            self.state
+                                                .messages
+                                                .push((MsgType::Sent, "sent a file".to_string()));
+                                        } else {
+                                            let msg = "The file is not present in the given path.";
+                                            (self.mode, self.state.dialog_state) =
+                                                info_dialog_box(msg.to_string());
+                                        }
                                     } else {
                                         let msg = "You are not connected to a peer.\n Connect to a peer using ?connect.";
                                         (self.mode, self.state.dialog_state) =
                                             info_dialog_box(msg.to_string());
                                     }
                                 }
+                                Commands::Quit => {
+                                    return Ok(true);
+                                }
+                            },
+                            Err(_) => {
+                                if let Some(client) = &self.client {
+                                    let mut client = client;
+                                    let msg = Message::new(input);
+                                    client.write(&msg.to_bytes())?;
+                                    self.state.messages.push((MsgType::Sent, msg.message()));
+                                } else {
+                                    let msg = "You are not connected to a peer.\n Connect to a peer using ?connect.";
+                                    (self.mode, self.state.dialog_state) =
+                                        info_dialog_box(msg.to_string());
+                                }
                             }
-                        }
-                        AppMode::DialogBox(..) => {
-                            let answer = self.state.dialog_state.take().unwrap();
-                            if answer.is_yes() {
-                                (answer.yes_fn)(self)?;
-                            } else {
-                                (answer.no_fn)(self)?;
-                            }
-                            self.mode = AppMode::Standard;
                         }
                     }
-                }
+                    AppMode::DialogBox(..) => {
+                        let answer = self.state.dialog_state.take().unwrap();
+                        if answer.is_yes() {
+                            (answer.yes_fn)(self)?;
+                        } else {
+                            (answer.no_fn)(self)?;
+                        }
+                        self.mode = AppMode::Standard;
+                    }
+                },
+
                 KeyCode::Left => {
                     if let AppMode::DialogBox(..) = self.mode {
                         self.state.dialog_state.as_mut().unwrap().toggle();
